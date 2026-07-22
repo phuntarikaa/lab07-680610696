@@ -11,6 +11,8 @@ import {
   zStudentPostBody,
   zStudentPutBody,
 } from "@libs/studentValidator.js";
+import { request } from 'node:http';
+import { success } from 'zod';
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -29,16 +31,35 @@ app.get("/", (req: Request, res: Response) => {
 app.get("/students", (req: Request, res: Response) => {
   try {
     const program = req.query.program;
+    const studentsID=req.query.studentId;
 
-    if (program) {
+    if (program && studentsID) {
       let filtered_students = students.filter(
+        (student) => student.program === program && student.studentId === studentsID
+      );
+      return res.json({
+        ok: true,
+        students: filtered_students,
+      });
+    } else if(studentsID){
+      let filtered_studentsID =students.filter(
+        (student) => student.studentId === studentsID
+        
+      );
+      return res.json({
+        ok : true,
+        students : filtered_studentsID
+      })
+    }else if(program){
+      let filtered_progarm = students.filter(
         (student) => student.program === program
       );
       return res.json({
-        success: true,
-        data: filtered_students,
-      });
-    } else {
+        ok : true,
+        students : filtered_progarm
+      })
+    }
+    else {
       return res.json({
         success: true,
         count: students.length,
@@ -150,12 +171,43 @@ app.put("/students", (req: Request, res: Response) => {
 
 // DELETE /students, body = {studentId}
 app.delete("/students", (req: Request, res: Response) => {
-  res.json({
-    message: "Implement this!"
-  })
+  try{
+    const body = req.body as Student;
+    const result = zStudentDeleteBody.safeParse(body);
+    if(!result.success){
+      return res.status(400).json({
+        ok : false,
+        message : "Student Id must contain 9 characters",
+      })
+    }
+    const findIndexs = students.findIndex((students:any) => students.studentId === body.studentId)
+    if(findIndexs === -1){
+      return res.status(404).json({
+        ok : false,
+        message :"Student ID does not exists",
+      })
+    }
+    students.splice(findIndexs,1);
+    return res.json({
+      ok : true,
+      message : `Student Id ${body.studentId} has been deleted`,
+    })
+  }catch(err){
+    return res.json({
+      success : false,
+      message : "Something is wrong pls try again",
+    })
+  }
 });
 
 // GET /api/me
+app.get("/me",(req: Request,res:Response)=>{
+  return res.json({
+    ok : true,
+    Fullname : "Puntarika Khokanklang",
+    studentID : "680610696",
+  })
+})
 
 app.listen(port, async () => {
   console.log(`🚀 Server running on http://localhost:${port}`);
